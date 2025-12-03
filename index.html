@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>A Special Book</title>
+    <!-- Tailwind CSS for modern responsive utilities -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js left in place (harmless if unused) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ------------------------- GLOBAL STYLES & FONT SETUP -------------------------- */
+        :root {
+            --book-color: #2a4d9b; /* Deep blue theme color */
+            --bg-color: #bcdcff; /* Festive sky blue */
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-color);
+            font-family: 'Poppins', sans-serif;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        /* Wrapper */
+        .page-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding-bottom: 50px; /* Space for the hint footer */
+        }
+
+        /* ------------------------- CONTROL PANEL -------------------------- */
+        .controls {
+            width: 100%;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.4);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center; /* Center the controls */
+            align-items: center;
+            font-size: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .controls button {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            background-color: var(--book-color);
+            color: white;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .controls button:hover {
+            background-color: #1e3a7c;
+            transform: translateY(-1px);
+        }
+
+        /* ------------------------- BOOK CONTAINER (THE MAGIC) -------------------------- */
+        .book {
+            width: 90%;
+            max-width: 850px;
+            height: 90vh;
+            position: relative;
+            margin-top: 20px;
+            perspective: 2000px; /* Strong 3D perspective */
+            transform-style: preserve-3d; /* Key for 3D children */
+            transition: transform 1s ease-in-out;
+        }
+        
+        /* NEW: Class for the open book state (centered and slightly tilted) */
+        .book.open {
+            transform: translateZ(-100px) rotateY(2deg); 
+        }
+
+        /* ONE page = one sheet */
+        .sheet {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 40px;
+            box-sizing: border-box;
+            border-radius: 10px;
+            transform-origin: left;
+            transition: transform 0.8s ease-in-out, box-shadow 0.8s ease-in-out;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            z-index: calc(500 - var(--i));
+            backface-visibility: hidden;
+        }
+        
+        .sheet.flipped {
+            transform: rotateY(-180deg);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); 
+        }
+
+        .cover {
+            background-color: var(--book-color);
+            color: white;
+            padding: 0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .cover.front {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .cover-inner {
+            text-align: center;
+            padding: 40px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        
+        .cover-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 44px;
+            color: white;
+            margin-top: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .polaroid-cover {
+            margin: 20px auto;
+            transform: rotate(-3deg);
+        }
+
+        .polaroid-img-placeholder-cover {
+            width: 250px;
+            height: 250px;
+            background-color: #ffc107;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .cover-quote {
+            font-size: 18px;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .page-inner {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .page-inner .text {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .polaroid-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-end; 
+        }
+        
+        .polaroid {
+            background: white;
+            padding: 8px;
+            width: 150px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            text-align: center;
+            transform: rotate(calc(var(--r) * 1deg));
+            margin-bottom: 20px;
+        }
+
+        .polaroid-img-placeholder {
+            width: 100%;
+            height: 120px;
+            background-color: #81c784;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .polaroid.large {
+            width: 220px;
+        }
+
+        .happy {
+            text-align: center;
+            font-size: 60px;
+            color: #ff5722;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            margin: 40px 0;
+        }
+
+        .cover.back {
+            background-color: #f7a83d;
+        }
+        .cover.back .cover-title {
+             color: var(--book-color); 
+        }
+
+        #confettiCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .hints {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+@media (max-width: 768px) {
+    .book {
+        height: 70vh;
+    }
+    .sheet {
+        padding: 20px;
+    }
+    .happy {
+        font-size: 40px;
+    }
+    .polaroid-row {
+        justify-content: center;
+    }
+}
+
+.video-page {
+    padding: 0 !important;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.video-full {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.sheet {
+    overflow-y: auto;      /* allows scrolling inside the page */
+    overflow-x: hidden;
+}
+.page-inner {
+    overflow-y: auto;      /* allows content + images to fit without cutting */
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="page-wrap">
+        <header class="controls">
+            <div class="music-control flex items-center space-x-2">
+                <button id="musicToggle" aria-pressed="false" class="bg-green-600 hover:bg-green-700">Play Music ▶</button>
+            </div>
+            <button id="resetBtn">Reset Book</button>
+        </header>
+
+        <main class="book" id="book" tabindex="0">
+
+            <!-- FRONT COVER -->
+            <section class="sheet cover front" data-index="0" style="--i:0;">
+                <div class="cover-inner">
+                    <h1 class="cover-title">The Unwritten End <br><br>
+                        <span id="namePlaceholder"> NIKKAM TEJASWINI</span></h1> 
+                    
+                    <figure class="polaroid polaroid-cover">
+                        <div class="polaroid-img-placeholder polaroid-img-placeholder-cover">
+                            <img src="COVER PHOTO.jpg" class="w-full h-full object-cover">
+                        </div>
+                        <figcaption class="text-xs text-black pt-1">Memories</figcaption>
+                    </figure>
+
+                    <p class="cover-quote">"Closure is found not in the book, but on the blank page after."</p>
+                    <br>
+                    <p> By SUMADHUR</p>
+                </div>
+            </section>
+
+            <!-- FULL VIDEO PAGE -->
+            <section class="sheet video-page" data-index="1" style="--i:1;">
+                <video id="birthdayVideo" controls autoplay muted playsinline class="video-full">
+                    <source src="MEMORIES.mp4" type="video/mp4">
+                 </video>
+            </section>
+
+            <!-- PAGE 1 -->
+            <section class="sheet" data-index="2" style="--i:2;">
+                <div class="page-inner">
+                    <div class="text">December 20, 2017 ee day roju nenu ninu love chaytam start chesanu apudu nuchi ippati varuku love chesthuna vunnanuu.....January 4th,  2018 nv inko 5 years wait chayii ...apudu nenu na decision chapata ani anav nenu wait chyatm start chesa.Ala 2 years tarvta malli nenu ni life lo ki vachanu..apudu malli nv inko 2 years wait chayi chapav and nenu wait chesa..ee waiting time chala jarigai ni kotha life start ayidi and start iyana  nenu inka nikosam wait chesanuu...but tarvta complete nenu vellipoyanu ni life lo nuchi kani ninu love chaytam wait chyatam manaleduuu nv ravuu ani telisinaa kuda nenu wait chesanu..aa Bad period lo nenu parthi day edusthunee vunadvadini...Still October 8th 2025 dhakaa....nenu malli ni life loki ravtam ee year lo malli nenu propose chadam ani anukunanu kani yekada nv nannu dooram pattestav emo ani oka chinna bayam adhuke chapaledu....nv jan 17th 2025 10.00 pm ki nv cal chesav apudu ni story chapata vunte nenu ventane propose chyali anipichidii kani bayam tho agipoyaa...but travta realise ayiaa Nv nannu,  ni partner la  vaddu ani anukuapudu nenu force chesi ninu ibbandi patti chaytam tappu avutudii adhuke nenu niku chapaleduu...but appatiki nikosam wait chesaa...but oka time lo nve annav nannu padayadaniki try chayi ani nenu aa roju chala happy ga feel iyaa next day ne propose chesadam ani anukunaa...apude naku mi bava garu gurchi chapav...naku ardham ayidi  valla side ninu love chesthunaru ani anipichidi nv chaptunapudu so agipoyanu...chapakuda chala badha paddaa travta malli realise ayiaa vaddu ani nve anukutunav ga  ani so..malli ani apukoni..nitho normal ga navvthuu vunaa..kani koni koni sarulu  chapali chapli anipichidi but kudarleduu...travta koni months tarvta nv accept chesav ani chapav inka adi teesukodaniki chala try chesanu...ayana apatiki wait chesaanuu malli vastav emo..ani but koni days ki baga realise ayidi ni life ipudu chala happy ga vundi ani..so inka nenu fix ayanuu nv kuda ravuu fix ipoyaru mi iddaru ani...Inka nenu kuda wait chaytam lo ardham ledu..nv inka ravuu ani clarity vachidi.Nv vere ammai ni chudu set chesuko ilati anapudu nenu naku nv kavali ani chapalekaaa leru leru ani chapata vachanu...evani ipudu chapadaniki reason em lev but naku chapali anipichi chapesthunaa ndhuku ante ee December 20 , 2025 nuchi nikosam wait chaytam manesthunnaaa...naku chala kastam ga ne vundi ila wait chayikuda vundalekapothuna but inka tappadhu nakuu so...eroju nuchi nikosam wait chyanu..nenu na kotha life ni bdy roju start chesthunanu</div>
+                    <div class="polaroid-row">
+                        <figure class="polaroid" style="--r:-5;">
+                            <div class="polaroid-img-placeholder" style="background-color:#ffe082;">
+                                <img src="photo 9.jpg" class="w-full h-full object-cover">
+                            </div>
+                            <figcaption class="text-xs text-gray-700 pt-1">July 14, 2020 </figcaption>
+                        </figure>
+                        <figure class="polaroid" style="--r:8;">
+                            <div class="polaroid-img-placeholder" style="background-color:#a5d6a7;">
+                                <img src="PHOTO 3.jpg" class="w-full h-full object-cover">
+                            </div>
+                            <figcaption class="text-xs text-gray-700 pt-1">October 25, 2020</figcaption>
+                        </figure>
+                        <figure class="polaroid" style="--r:-2;">
+                            <div class="polaroid-img-placeholder" style="background-color:#90caf9;">
+                                <img src="PHOTO 2.jpg" class="w-full h-full object-cover">
+                            </div>
+                            <figcaption class="text-xs text-gray-700 pt-1"> November 4, 2021</figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAGE 2 -->
+            <section class="sheet" data-index="3" style="--i:3;">
+                <div class="page-inner">
+                    <div class="text">Na life nv chala special because na life chala vatilo nitho start chesanu...and 1) Mainly na First salary tho  nenu niku ni photo cup ichanu...first time nenu November 6th siling work ki velli 600 earn chesanu..chesi niku cup and pen ichanu...that is my first salary in my life adi nikosam spend chayatam chala happy... 2) na life oka ammai ki  handshake (touch ) ivtam nitho ne... 3) naku na life 1st bdy gift ivtam nve adhuku nenu nitho vuna parthi year niku bdy gift istanu. Ilana chala ne vunai....Na life lo ani vunaa lekapoyina ni memories vunai chaluu vatitho nenu gadipestanuu already ini years and day ala ne chesanu parthi roju ni photo chudkuda vundanuu..and naku nitho selfie tessukovtam chala istam but nv oka selfie ichav adi chalu..naku nenu eni sarulu kalisna nenu yepudu selfie adgaledu..Inka adaganuu because nv ipudu okari life partner vi..adhuke adgaledu...ivv ani niku ipudu chappatam vala use em ledu but ivani chapakapothe kotha life start chyalenu anukoni chaptunaa...emiana thappu ga chapi vunte...and nenu kalisnapudu mis behave chesi vuna nenu chayledu but niku ala anipichinaa worng intention la anipichina...Im really very sorry 😞  for that and also na vala chala suffer ayav Im really sorry..... ni life lo evaru vuna lekapoyina nenu vuntanu nikosam adi ye time lo iyana natho mataldina mataladakapoyina...as well wisher ga nikosam vuntanu.
+Thank you for all memories , ani natho ne pattukutanu aa memories ni.ini days ivi chapledu chapli ani kuda anukoledu but inka wait chesina ravuu ani telisi chaptunanu..alsu wait chayli ane anipistudi naku ndhukoo teilytam ledu alavatu aipoyidi...total 7 years wait chesanu teilkuda ipoyayai ini years inko 7 years wait chesina naku answer radhu soo...adhuke quite chesthunanu..as OSL(One Side Love) ga.....
+
+Ivi ani na feelings ninu hurt chyadaniki kani trouble chyadaniki kani kadhuu......evi  nenu yentha ista padanono chapadanike ivi ani...just lite tessuko...😊
+
+Ipudu nv chala happy ga vunav ni life lo niku nachina person tho...nv ilane inka ekkava enjoy chyali life lo...ani manchi ga jagarali ni life lo  ani gattiga korukutananu......
+ 
+Ee gift chaydaniki naku 47 hours pattidi adi kuda 21 days ki....edi chala chinna gift ye but life long vuntudi Ee book...Once again congratulations..have a great life and keep always smiling 😄
+
+Signing Off as OSL...R
+
+ WISH YOU  A VERY..............</div>
+                    <div class="polaroid-row">
+                        <figure class="polaroid" style="--r:6;">
+                            <div class="polaroid-img-placeholder" style="background-color:#f8bbd0;">
+                                <img src="PHOTO 8.jpg" class="w-full h-full object-cover">
+                            </div>
+                            <figcaption class="text-xs text-gray-700 pt-1">January 10, 2025</figcaption>
+                        </figure>
+                        <figure class="polaroid" style="--r:-4;">
+                            <div class="polaroid-img-placeholder" style="background-color:#cf93d8;">
+                                <img src="PHOTO 10.jpg" class="w-full h-full object-cover">
+                            </div>
+                            <figcaption class="text-xs text-gray-700 pt-1">March 28,2025</figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAGE 3 -->
+            <section class="sheet" data-index="4" style="--i:4;">
+                <div class="page-inner flex justify-center items-center">
+                    <div class="text-center">
+                        <h2 class="happy">HAPPY BIRTHDAY<br><span id="namePlaceholder">TEJASWINI</span></h2>
+                        <figure class="polaroid large mx-auto" style="--r:1;">
+                            <div class="polaroid-img-placeholder" style="background-color:#ff9800; height: 180px;">
+                                <img src="PHOTO 1.jpg" class="w-full h-full object-cover">
+                            </div>
+                            <figcaption class="text-xs text-gray-700 pt-1">keep smiling!</figcaption>
+                        </figure>
+                    </div>
+                </div>
+                <div class="from-tag">from SUMADHUR</div>
+
+            </section>
+
+            <!-- BACK COVER -->
+            <section class="sheet cover back" data-index="5" style="--i:5;">
+                <div class="cover-inner">
+                    <h1 class="cover-title">Thank You For Existing In My Life</h1>
+                </div>
+            </section>
+
+            <canvas id="confettiCanvas"></canvas>
+        </main>
+
+        <footer class="hints">Click or press Enter to turn pages • Left Arrow to go back</footer>
+    </div>
+
+    <script>
+    /* ---------------------------------- MUSIC ---------------------------------- */
+
+    const MUSIC_FILE = "Parichayamila Bgm.mp3";
+    const audio = new Audio(MUSIC_FILE);
+    audio.loop = true;
+    audio.preload = "auto";
+
+    let isMusicPlaying = false;
+    let audioStartedByUser = false;
+    let pauseTime = 0;
+
+    const musicToggleBtn = document.getElementById("musicToggle");
+
+    function updateMusicButton() {
+        if (isMusicPlaying) {
+            musicToggleBtn.textContent = "Pause Music ❚❚";
+            musicToggleBtn.classList.remove("bg-green-600");
+            musicToggleBtn.classList.add("bg-red-600");
+        } else {
+            musicToggleBtn.textContent = "Play Music ▶";
+            musicToggleBtn.classList.remove("bg-red-600");
+            musicToggleBtn.classList.add("bg-green-600");
+        }
+    }
+
+    updateMusicButton();
+
+    async function startAudioFrom(offsetSec = 0) {
+        try {
+            audio.currentTime = offsetSec || 0;
+            await audio.play();
+            isMusicPlaying = true;
+            audioStartedByUser = true;
+            updateMusicButton();
+        } catch (err) {
+            console.warn("Audio blocked until user interacts:", err);
+        }
+    }
+
+    function pauseAudio() {
+        try {
+            pauseTime = audio.currentTime;
+            audio.pause();
+        } catch {}
+        isMusicPlaying = false;
+        updateMusicButton();
+    }
+
+    musicToggleBtn.addEventListener("click", async (ev) => {
+        ev.stopPropagation();
+        if (!audioStartedByUser && !isMusicPlaying) {
+            await startAudioFrom(pauseTime);
+            return;
+        }
+        if (isMusicPlaying) pauseAudio();
+        else await startAudioFrom(pauseTime);
+    });
+
+    /* ---------------------------------- BOOK LOGIC ---------------------------------- */
+
+    const sheets = document.querySelectorAll(".sheet");
+    let current = 0;
+    const bookElement = document.getElementById("book");
+
+    sheets.forEach((p, i) => p.style.setProperty("--i", i));
+
+    async function flipForward() {
+    if (current < sheets.length - 1) {
+
+        // Auto-play song when the book opens (first flip)
+        if (current === 0 && !audioStartedByUser) {
+            try {
+                await startAudioFrom(0);   // start background music
+            } catch (err) {
+                console.log("Autoplay blocked:", err);
+            }
+        }
+
+        sheets[current].classList.add("flipped");
+        current++;
+
+        if (current === 1) bookElement.classList.add("open");
+        if (current === sheets.length - 2) startConfetti();
+    }
+}
+
+
+    function flipBack() {
+        if (current > 0) {
+            current--;
+            sheets[current].classList.remove("flipped");
+            if (current === 0) bookElement.classList.remove("open");
+        }
+    }
+
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest('.controls')) flipForward();
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") flipForward();
+        if (e.key === "ArrowLeft") flipBack();
+    });
+
+    /* ---------------------------------- RESET ---------------------------------- */
+
+    let animationFrameId = null;
+    const canvas = document.getElementById("confettiCanvas");
+    const ctx = canvas.getContext("2d");
+
+    document.getElementById("resetBtn").onclick = () => {
+        sheets.forEach((p) => p.classList.remove("flipped"));
+        current = 0;
+        bookElement.classList.remove("open");
+
+        audio.pause();
+        audio.currentTime = 0;
+        isMusicPlaying = false;
+        audioStartedByUser = false;
+        pauseTime = 0;
+        updateMusicButton();
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    };
+
+    /* ---------------------------------- CONFETTI ---------------------------------- */
+
+    function startConfetti() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        const pieces = [];
+        const colors = ["#ff4d4d", "#4dd2ff", "#ffff66", "#85e085"];
+
+        for (let i = 0; i < 150; i++) {
+            pieces.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * -canvas.height,
+                size: Math.random() * 8 + 4,
+                speed: Math.random() * 3 + 1,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                swing: Math.random() * 2,
+            });
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            pieces.forEach((p) => {
+                p.y += p.speed;
+                p.x += Math.sin(p.y * 0.02) * p.swing;
+
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+
+                if (p.y > canvas.height) {
+                    p.y = -20;
+                    p.x = Math.random() * canvas.width;
+                }
+            });
+
+            animationFrameId = requestAnimationFrame(update);
+        }
+
+        update();
+    }
+    const birthdayVideo = document.getElementById("birthdayVideo");
+
+function playVideoOnPageOpen() {
+    if (current === 1) {           // Video page index
+        birthdayVideo.currentTime = 0;   // Start from beginning
+        birthdayVideo.play();            // Auto-play when page turns
+    } else {
+        birthdayVideo.pause();           // Pause when leaving the page
+    }
+}
+async function flipForward() {
+    if (current < sheets.length - 1) {
+
+        // Auto-play song when the book opens (first flip)
+        if (current === 0 && !audioStartedByUser) {
+            try {
+                await startAudioFrom(0);
+            } catch (err) {}
+        }
+
+        sheets[current].classList.add("flipped");
+        current++;
+
+        playVideoOnPageOpen();  // ← ADDED LINE
+
+        if (current === 1) bookElement.classList.add("open");
+        if (current === sheets.length - 2) startConfetti();
+    }
+}
+
+
+function flipBack() {
+    if (current > 0) {
+        current--;
+        sheets[current].classList.remove("flipped");
+
+        playVideoOnPageOpen(); // ← ADDED LINE
+
+        if (current === 0) bookElement.classList.remove("open");
+    }
+}
+
+
+
+    </script>
+</body>
+</html>
